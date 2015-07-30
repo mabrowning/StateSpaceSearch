@@ -1,11 +1,34 @@
-
 #include <array>
 #include <vector>
 #include <iostream>
 #include <iomanip>
+#include <csignal>
+#include <unistd.h>
 
 #include "hash.h"
 #include "astar-solve.h"
+#include "idastar-solve.h"
+
+namespace
+{
+	  volatile std::sig_atomic_t gSignalStatus;
+}
+ 
+void signal_handler(int signal)
+{
+	  gSignalStatus = signal;
+}
+
+bool PrintStatus() 
+{
+	if( gSignalStatus > 0 )
+	{
+		gSignalStatus = 0;
+		return true;
+	}
+	return false;
+}
+	
 
 struct SlidingPuzzleAction
 {
@@ -14,14 +37,33 @@ struct SlidingPuzzleAction
 		HOLE_UP,
 		HOLE_DOWN,
 		HOLE_LEFT,
-		HOLE_RIGHT
+		HOLE_RIGHT,
+
+		NUM_HoleDirection
+		
 	};
+
+	constexpr static std::size_t MaxBranch   = NUM_HoleDirection; //maximum out-degree of state graph
+	constexpr static std::size_t MaxInBranch = NUM_HoleDirection; //maximum in-degree of state graph. This puzzle is reversible, so symmetric, so in=out
+
+	typedef std::array< SlidingPuzzleAction*, MaxBranch > Actions;
 
 	int GetCost() const { return 1; }
 
 	HoleDirection dir;
 	SlidingPuzzleAction( HoleDirection d = HOLE_UP ) : dir(d){}
+	bool operator==( const SlidingPuzzleAction & o ) const { return dir == o.dir; };
+
+	static SlidingPuzzleAction UP    ;
+	static SlidingPuzzleAction DOWN  ;
+	static SlidingPuzzleAction LEFT  ;
+	static SlidingPuzzleAction RIGHT ;
 };
+
+SlidingPuzzleAction SlidingPuzzleAction::UP    = HOLE_UP;
+SlidingPuzzleAction SlidingPuzzleAction::DOWN  = HOLE_DOWN;
+SlidingPuzzleAction SlidingPuzzleAction::LEFT  = HOLE_LEFT;
+SlidingPuzzleAction SlidingPuzzleAction::RIGHT = HOLE_RIGHT;
 
 constexpr std::size_t factorial(std::size_t n) { 
 	    return n == 0 ? 1  :  n * factorial(n-1); 
@@ -31,15 +73,17 @@ constexpr std::size_t factorial(std::size_t n) {
 template< unsigned int N, unsigned int M>
 struct SlidingPuzzleState
 {
+	typedef unsigned char index_t;
 	constexpr static std::size_t NumStates = factorial( N * M );
 	//API for AStarSolve
-	std::vector< SlidingPuzzleAction > AvailableActions() const
+	SlidingPuzzleAction::Actions AvailableActions() const
 	{
-		std::vector< SlidingPuzzleAction > ret;
-		if( n > 0   ) ret.push_back( SlidingPuzzleAction::HOLE_UP    );
-		if( n < N-1 ) ret.push_back( SlidingPuzzleAction::HOLE_DOWN  );
-		if( m > 0   ) ret.push_back( SlidingPuzzleAction::HOLE_LEFT  );
-		if( m < M-1 ) ret.push_back( SlidingPuzzleAction::HOLE_RIGHT );
+		SlidingPuzzleAction::Actions ret = { nullptr, nullptr, nullptr, nullptr };
+		auto act = ret.data();
+		if( n > 0   ) *(act++) = &SlidingPuzzleAction::UP   ;
+		if( n < N-1 ) *(act++) = &SlidingPuzzleAction::DOWN ;
+		if( m > 0   ) *(act++) = &SlidingPuzzleAction::LEFT ;
+		if( m < M-1 ) *(act++) = &SlidingPuzzleAction::RIGHT;
 
 		return ret;
 	}
@@ -63,7 +107,7 @@ struct SlidingPuzzleState
 		, GoalDist( 0 )
 	{
 		//Initial state, all in order
-		unsigned int v=0;
+		unsigned char v=0;
 		for( auto & row : arr )
 			for( auto & val : row )
 				val = v++;
@@ -71,9 +115,9 @@ struct SlidingPuzzleState
 
 
 	//coords of 0
-	int n,m;
+	index_t n,m;
 
-	int GetGoalDist() const { return GoalDist; };
+	int EstGoalDist() const { return GoalDist; };
 
 	bool IsGoal() const 
 	{
@@ -81,19 +125,19 @@ struct SlidingPuzzleState
 	}
 
 	private:
-	int DoGetGoalDist() const 
+	int DoEstGoalDist() const 
 	{
 		//Esimate the "number of moves" needed to get to the goal state
 		int dist = 0;
-		for( int n = 0; n < N; ++n )
+		for( index_t n = 0; n < N; ++n )
 		{
-			for( int m = 0; m < M; ++m )
+			for( index_t m = 0; m < M; ++m )
 			{
 				//n,m are the actual coordinates
 				//The value at this index
 				auto val = arr[n][m];
-				int n_ = val / M;
-				int m_ = val % M;
+				index_t n_ = val / M;
+				index_t m_ = val % M;
 				//n_,m_ are the coordinates of val
 
 				//manhattan distance of moves to put this piece where it belongs
@@ -103,7 +147,7 @@ struct SlidingPuzzleState
 		return dist;
 	}
 
-	int GoalDist;// = DoGetGoalDist();
+	int GoalDist;// = DoEstGoalDist();
 
 	SlidingPuzzleState( const SlidingPuzzleState & o, SlidingPuzzleAction::HoleDirection dir )
 		: arr ( o.arr )
@@ -127,6 +171,8 @@ struct SlidingPuzzleState
 			case SlidingPuzzleAction::HOLE_RIGHT:
 				m += 1;
 				break;
+			default:
+				break;
 		}
 
 		unsigned char oldval = 0;//arr[o.n][o.m];
@@ -136,7 +182,7 @@ struct SlidingPuzzleState
 		//Apply to tile arrangement
 		std::swap( arr[n][m], arr[o.n][o.m] );
 
-		int test = DoGetGoalDist();
+		int test = DoEstGoalDist();
 
 		unsigned char old_n = oldval / M;
 		unsigned char old_m = oldval % M; 
@@ -199,61 +245,69 @@ std::ostream & operator<<(std::ostream &os, const SlidingPuzzleAction & a )
 		case SlidingPuzzleAction::HOLE_RIGHT:
 			os << "RIGHT";
 			break;
+		default:
+			break;
 	}
 	return os;
+}
+
+template<typename State, typename Action>
+State GetRandomInitialState( State state  )
+{
+	for( int i = 0 ; i < 10000; ++i )
+	{
+		auto actions = state.AvailableActions();
+		auto action = actions[0];
+		while( ( action = actions[rand()%actions.size()] ) == nullptr );
+
+		state = state.Apply( *action );
+	}
+
+	return state;
 }
 
 
 int main( int argc, char** argv )
 {
 
+	std::signal( SIGINT, signal_handler );
+
 	typedef SlidingPuzzleState<4,4> State_t;
 
-	//Generate an initial (valid) puzzle randomly
-	State_t state;
-	State_t maxState;
-	int maxDist = 0;
-
-	//Apply 100 random state transitions
-	for( int i = 0 ; i < 10000; ++i )
-	{
-		auto actions = state.AvailableActions();
-		auto action =  actions[rand()%actions.size()];
-
-		state = state.Apply( action );
-		int dist = state.GetGoalDist( ); 
-		if( dist > maxDist )
-		{
-			maxDist  = dist;
-			maxState = state;
-		}
-
-		/*
-		std::cout << action << "->\n" << state;
-		std::cout << dist << std::endl;
-		*/
-	}
-
-	std:: cout << maxState << maxDist << std::endl;
-
-
-	state = maxState;
+	auto initial = GetRandomInitialState< State_t, SlidingPuzzleAction>( State_t() );
 
 	//Solve that puzzle
-	auto Solution = AStar< State_t, SlidingPuzzleAction>::Solve(
-			maxState, 
-			std::mem_fn( &State_t::GetGoalDist ), //Evaluator
-			std::mem_fn( &State_t::IsGoal )		  //GoalTest
-			); 
+	bool astar = !( argc == 2 && strcmp( argv[1], "ida*" ) == 0 );
+	std::vector< SlidingPuzzleAction> Solution;
+	if( astar )
+	{
+		Solution = AStar< State_t, SlidingPuzzleAction>::Solve(
+				initial,
+				std::mem_fn( &State_t::EstGoalDist ), //heuristic
+				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
+				PrintStatus
+				); 
+	}
+	else
+	{
+		Solution = IDAStar< State_t, SlidingPuzzleAction>::Solve(
+				initial,
+				std::mem_fn( &State_t::EstGoalDist ), //heuristic
+				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
+				PrintStatus
+				); 
+	}
 
-	std::cout << "Solution has " << Solution.size() << " moves" << std::endl;
+	std::cout << Solution.size() << std::endl;
+	return 0;
 
+	auto state = initial;
+	std::cout << state;
 	for( auto action : Solution )
 	{
 		state = state.Apply( action );
 		std::cout << action << "->\n" << state;
 	}
-
 	return 0;
 }
 
