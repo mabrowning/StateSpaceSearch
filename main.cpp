@@ -287,7 +287,7 @@ int main( int argc, char** argv )
 				std::mem_fn( &State_t::EstGoalDist ), //heuristic
 				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
 				PrintStatus };
-		//Solution = Solver.Solve( initial );
+		Solution = Solver.Solve( initial );
 	}
 	else if( rbfs ) 
 	{
@@ -295,7 +295,7 @@ int main( int argc, char** argv )
 				std::mem_fn( &State_t::EstGoalDist ), //heuristic
 				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
 				PrintStatus };
-		//Solution = Solver.Solve( initial );
+		Solution = Solver.Solve( initial );
 	}
 	else
 	{
@@ -303,7 +303,7 @@ int main( int argc, char** argv )
 				std::mem_fn( &State_t::EstGoalDist ), //heuristic
 				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
 				PrintStatus };
-		//Solution = Solver.Solve( initial );
+		Solution = Solver.Solve( initial );
 	}
 
 	std::cout << Solution.size() << std::endl;

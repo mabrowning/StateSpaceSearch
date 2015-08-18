@@ -9,6 +9,8 @@ astar: puzzle_test
 	./puzzle_test 
 idastar: puzzle_test
 	./puzzle_test 'ida*'
+rbfs: puzzle_test
+	./puzzle_test 'rbfs'
 
 trace: trace.svg
 
