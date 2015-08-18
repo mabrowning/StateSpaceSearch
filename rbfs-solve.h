@@ -1,6 +1,6 @@
 #pragma once
-#ifndef IDASTAR_SOLVE_H
-#define IDASTAR_SOLVE_H
+#ifndef RBFS_SOLVE_H
+#define RBFS_SOLVE_H
 
 #include <vector>
 #include <queue>
@@ -10,7 +10,7 @@
 #include "solver.h"
 
 template< typename State, typename Action > 
-struct IDAStar : public Solver< State, Action >
+struct RBFS : public Solver< State, Action >
 {
 	typedef Solver< State, Action > Solver;
 	using Solver::Solver;

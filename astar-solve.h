@@ -1,4 +1,9 @@
-#include <functional>
+#pragma once
+#ifndef ASTAR_SOLVE_H
+#define ASTAR_SOLVE_H
+
+#include "solver.h"
+
 #include <vector>
 #include <queue>
 #include <unordered_map>
@@ -6,8 +11,14 @@
 #include <algorithm>
 
 template< typename State, typename Action > 
-struct AStar
-{
+struct AStar : public Solver< State, Action >
+{ 
+	typedef Solver< State, Action > Solver;
+	using Solver::Solver;
+	using Solver::GoalCostEstimate;
+	using Solver::GoalTest;
+	using Solver::PrintStatus;
+
 	//forward declares
 	struct MetaData;
 
@@ -55,12 +66,7 @@ struct AStar
 		}
 	};
 
-static std::vector< Action > Solve( 
-		const State & initial, 
-		std::function< int ( const State & ) > && GoalCostEstimate, 
-		std::function< bool( const State & ) > && GoalTest,
-		std::function< bool(               ) > && PrintStatus
-		)
+std::vector< Action > Solve( const State & initial )
 {
 
 	StatesHashTable                         States;
@@ -158,3 +164,5 @@ static std::vector< Action > Solve(
 	return ret;
 }
 };
+
+#endif

@@ -8,6 +8,7 @@
 #include "hash.h"
 #include "astar-solve.h"
 #include "idastar-solve.h"
+#include "rbfs-solve.h"
 
 namespace
 {
@@ -277,25 +278,32 @@ int main( int argc, char** argv )
 	auto initial = GetRandomInitialState< State_t, SlidingPuzzleAction>( State_t() );
 
 	//Solve that puzzle
-	bool astar = !( argc == 2 && strcmp( argv[1], "ida*" ) == 0 );
+	bool idast = !( argc == 2 && strcmp( argv[1], "ida*" ) == 0 );
+	bool rbfs  = !( argc == 2 && strcmp( argv[1], "rbfs" ) == 0 );
 	std::vector< SlidingPuzzleAction> Solution;
-	if( astar )
+	if( idast )
 	{
-		Solution = AStar< State_t, SlidingPuzzleAction>::Solve(
-				initial,
+		auto Solver = IDAStar<State_t, SlidingPuzzleAction>{
 				std::mem_fn( &State_t::EstGoalDist ), //heuristic
 				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
-				PrintStatus
-				); 
+				PrintStatus };
+		//Solution = Solver.Solve( initial );
+	}
+	else if( rbfs ) 
+	{
+		auto Solver = RBFS<State_t, SlidingPuzzleAction>{
+				std::mem_fn( &State_t::EstGoalDist ), //heuristic
+				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
+				PrintStatus };
+		//Solution = Solver.Solve( initial );
 	}
 	else
 	{
-		Solution = IDAStar< State_t, SlidingPuzzleAction>::Solve(
-				initial,
+		auto Solver = AStar<State_t, SlidingPuzzleAction>{
 				std::mem_fn( &State_t::EstGoalDist ), //heuristic
 				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
-				PrintStatus
-				); 
+				PrintStatus };
+		//Solution = Solver.Solve( initial );
 	}
 
 	std::cout << Solution.size() << std::endl;

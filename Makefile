@@ -1,5 +1,5 @@
 #Find all "*.h" files included in main.cpp
-HEADERS=$(shell grep "include \".*\.h\"" main.cpp | sed 's/^.*"\(.*\)".*$$/\1/' )
+HEADERS=$(shell grep "include \".*\.h\"" main.cpp | sed 's/^.*"\(.*\)".*$$/\1/' ) solver.h
 
 all: puzzle_test_dbg
 opt: puzzle_test
