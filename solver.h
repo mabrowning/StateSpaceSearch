@@ -5,7 +5,7 @@
 //Base for State-space search solvers
 
 #include <functional>
-template< typename State, typename Action > 
+template< typename State > 
 struct Solver
 {
 	const std::function< int ( const State & ) > & GoalCostEstimate;

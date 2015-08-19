@@ -1,5 +1,5 @@
 puzzle_test*
 .*swp
 *~
-out.stacks
-trace.svg
+*.stacks
+*.svg

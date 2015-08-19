@@ -9,10 +9,11 @@
 
 #include "solver.h"
 
-template< typename State, typename Action > 
-struct RBFS : public Solver< State, Action >
+template< typename State > 
+struct RBFS : public Solver< State >
 {
-	typedef Solver< State, Action > Solver;
+	typedef typename State::Action Action;
+	typedef Solver< State > Solver;
 	using Solver::Solver;
 	using Solver::GoalCostEstimate;
 	using Solver::GoalTest;

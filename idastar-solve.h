@@ -9,10 +9,11 @@
 
 #include "solver.h"
 
-template< typename State, typename Action > 
-struct IDAStar : public Solver< State, Action >
+template< typename State > 
+struct IDAStar : public Solver< State >
 {
-	typedef Solver< State, Action > Solver;
+	typedef typename State::Action Action;
+	typedef Solver< State > Solver;
 	using Solver::Solver;
 	using Solver::GoalCostEstimate;
 	using Solver::GoalTest;
@@ -46,13 +47,13 @@ std::vector< Action > Solve( const State & initial )
 		int limit; //return
 		int action_num;
 
-		StackFrame( const State & s, int g, 
-				const std::function< int ( const State & ) > & GoalCostEstimate )
+		StackFrame( const State & s, const Action & prevAction, int g, 
+				const IDAStar & solver )
 			: state( s )
 			, limit(std::numeric_limits<int>::max()) //inifinity
 			, action_num( -1 )
 		{
-			auto actions = s.AvailableActions();
+			auto actions = s.AvailableActions( prevAction );
 			auto i = std::begin( successors );
 			for( auto & paction : actions )
 			{
@@ -61,14 +62,14 @@ std::vector< Action > Solve( const State & initial )
 				{
 					i->g      = g + paction->GetCost();
 					i->state  = state.Apply( *paction );
-					i->f      = i->g + GoalCostEstimate( i->state );
+					i->f      = i->g + solver.GoalCostEstimate( i->state );
 				}
 				++i;
 			}
 			std::sort( std::begin( successors ), std::end( successors ) );
 		}
 	};
-	std::deque< StackFrame > Stack { { StackFrame{ initial, 0, GoalCostEstimate }}  };
+	std::deque< StackFrame > Stack { { StackFrame{ initial, Action(), 0, *this }}  };
 
 	int limit = GoalCostEstimate( initial ) ;
 	int oldlimit = 0;
@@ -125,12 +126,9 @@ std::vector< Action > Solve( const State & initial )
 			top.limit = std::min( top.limit, successor.f );
 		else
 		{
-			Stack.emplace_back( successor.state, successor.g, GoalCostEstimate );
+			Stack.emplace_back( successor.state, *successor.paction, successor.g, *this );
 			if( successor.g >= deep_g )
-			{
 				deep_g = successor.g + 1;
-				std::cout << deep_g << std::endl;
-			}
 		}
 	}
 

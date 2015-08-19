@@ -10,10 +10,11 @@
 #include <limits>
 #include <algorithm>
 
-template< typename State, typename Action > 
-struct AStar : public Solver< State, Action >
+template< typename State > 
+struct AStar : public Solver< State >
 { 
-	typedef Solver< State, Action > Solver;
+	typedef typename State::Action Action;
+	typedef Solver< State > Solver;
 	using Solver::Solver;
 	using Solver::GoalCostEstimate;
 	using Solver::GoalTest;
