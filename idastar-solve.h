@@ -37,7 +37,7 @@ std::vector< Action > Solve( const State & initial )
 				if( paction == nullptr ) 
 					return false; //nullest last
 				if( f == o.f )
-					return g < o.g; //shallowest first
+					return g > o.g; //deepest first
 				return f < o.f; //cheapest first
 			}
 		};

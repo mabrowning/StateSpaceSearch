@@ -19,125 +19,98 @@ struct RBFS : public Solver< State >
 	using Solver_t::GoalTest;
 	using Solver_t::PrintStatus;
 
-std::vector< Action > Solve( const State & initial )
-{
+	std::vector< Action > Solution;
 
-	struct StackFrame
+	struct StateAndMeta
 	{
-		struct Successor
+		Action* paction;
+		State state;
+
+		int g;
+		int f;
+		int F;
+
+		bool operator< ( const StateAndMeta & o ) const
 		{
-			Action* paction;
-			State state;
-			int g;
-			int f;
-
-			bool operator< ( const Successor & o ) const
-			{
-				//true = more first, false is more last
-				if( paction == nullptr ) 
-					return false; //nullest last
-				if( f == o.f )
-					return g < o.g; //shallowest first
-				return f < o.f; //cheapest first
-			}
-		};
-		std::array< Successor, Action::MaxBranch > successors;
-
-		const State & state;
-		int limit; //return
-		int action_num;
-
-		StackFrame( const State & s, int g, 
-				const std::function< int ( const State & ) > & GoalCostEstimate )
-			: state( s )
-			, limit(std::numeric_limits<int>::max()) //inifinity
-			, action_num( -1 )
-		{
-			auto actions = s.AvailableActions();
-			auto i = std::begin( successors );
-			for( auto & paction : actions )
-			{
-				i->paction = paction;
-				if( paction )
-				{
-					i->g      = g + paction->GetCost();
-					i->state  = state.Apply( *paction );
-					i->f      = i->g + GoalCostEstimate( i->state );
-				}
-				++i;
-			}
-			std::sort( std::begin( successors ), std::end( successors ) );
+			//true = more first, false is more last
+			if( paction == nullptr ) 
+				return false; //nullest last
+			if( F == o.F )
+				return g > o.g; //deepest first
+			return F < o.F; //cheapest first
 		}
 	};
-	std::deque< StackFrame > Stack { { StackFrame{ initial, 0, GoalCostEstimate }}  };
-
-	int limit = GoalCostEstimate( initial ) ;
-	int oldlimit = 0;
 
 	unsigned int counter = 0;
-	int deep_g = 0;
+	unsigned int depth = 0;
 
-	while( !Stack.empty() && limit != oldlimit )
+	int RBFS_step( const StateAndMeta & n, int B )
 	{
-		if( counter++ % 100 == 0 && PrintStatus() )
+		if( GoalTest( n.state ) )
 		{
-			std::cerr << Stack.size() << " " << limit << " " << deep_g << std::endl;
-		}
-		StackFrame & top = Stack.back();
-		auto & action_num = top.action_num;
-		++action_num;
-
-		//find the next non-null paction
-		for( ; action_num < int(Action::MaxBranch) && 
-				top.successors[action_num].paction == nullptr; ++action_num );
-		if( action_num == int(Action::MaxBranch) )
-		{
-			if( Stack.size() == 1 )
-			{
-				//Update global limit
-				oldlimit = limit;
-				limit = top.limit;
-				//Reset top
-				top.action_num = 0;
-				top.limit = std::numeric_limits<int>::max();
-			}
-			else
-			{
-				int lim = top.limit;
-				Stack.pop_back();
-				StackFrame & t = Stack.back();
-				t.limit = std::min( t.limit, lim );
-			}
-			continue;
-		}
-		auto &successor = top.successors[ action_num ];
-
-		if( GoalTest( successor.state ) ) 
-		{
-			//Done!
-			std::vector< Action > ret;
-			ret.reserve( Stack.size() + 1 );
-			for( auto & SF : Stack )
-				ret.push_back( *( SF.successors[ SF.action_num ].paction ) );
-			return ret;
+			Solution.resize(depth);
+			return -1;
 		}
 
-		if( successor.f > limit )
-			top.limit = std::min( top.limit, successor.f );
-		else
+		++depth;
+
+		//if( counter++ % 100 == 0 && PrintStatus() )
+		if( counter++ % 100 == 0 )
 		{
-			Stack.emplace_back( successor.state, successor.g, GoalCostEstimate );
-			if( successor.g >= deep_g )
-			{
-				//debugging
-				deep_g = successor.g + 1;
-				std::cerr << deep_g << std::endl;
-			}
+			std::cerr << depth << " " << n.F << std::endl;
 		}
+
+		std::array< StateAndMeta, Action::MaxBranch > child;
+
+		auto actions = n.state.AvailableActions();
+		auto i = std::begin( child );
+		for( auto & paction : actions )
+		{
+			i->paction = paction;
+			if( paction )
+			{
+				i->g      = n.g + paction->GetCost();
+				i->state  = n.state.Apply( *paction );
+				i->f      = i->g + GoalCostEstimate( i->state );
+				if( n.f < n.F )
+					i->F  = std::max( n.F, i->f );
+				else
+					i->F  = i->f;
+			}
+			++i;
+		}
+
+		std::sort( std::begin( child ), std::end( child ) );
+		while( child[0].F <= B )
+		{
+			auto & top = child[0];
+
+			top.F = RBFS_step( top, std::min( B, child[1].F ) );
+			if( top.F == -1 )
+			{
+				Solution[depth-1] = *top.paction;
+				return -1;
+			}
+
+			std::sort( std::begin( child ), std::end( child ) );
+		} 
+
+		--depth;
+		return child[0].F;
 	}
 
-
-	return std::vector< Action >{};
+std::vector< Action > Solve( const State & initial )
+{
+	int f = GoalCostEstimate( initial );
+	StateAndMeta n{ nullptr, initial, 0/*g*/, f/*f*/, f/*F*/ };
+	int B = f;
+	while( true )
+	{
+		B = RBFS_step( n, B );
+		if( B == -1 ) break;
+	}
+	
+	return Solution;
 
 }
 };
