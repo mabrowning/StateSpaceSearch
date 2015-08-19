@@ -67,6 +67,54 @@ struct AStar : public Solver< State >
 		}
 	};
 
+	template< typename Bucket >
+	struct PriorityQueue1LevelBucket
+	{
+		typedef typename Bucket::const_reference const_reference;
+		std::vector< Bucket > queue;
+		std::size_t min_priority = std::numeric_limits< std::size_t >::max();
+
+		bool empty() const
+		{
+			return min_priority == std::numeric_limits< std::size_t >::max();
+		}
+
+		const_reference front() const 
+		{
+			return queue[ min_priority ].front();
+		}
+
+		void pop_front()
+		{
+			queue[ min_priority ].pop_front();
+			auto it  = queue.begin() + min_priority;
+			auto end = queue.end();
+			while( it != end && (it++)->empty() );
+			if( it == end ) min_priority = std::numeric_limits< std::size_t >::max();
+			else            min_priority = std::distance( queue.begin(), it );
+		}
+
+		Bucket & get_bucket( std::size_t priority )
+		{
+			if( priority > queue.size() )
+				queue.resize( priority + 1 );
+			if( priority < min_priority )
+				min_priority = priority;
+			return queue[ priority ];
+		}
+	};
+
+	struct PriorityQueue : public 
+		PriorityQueue1LevelBucket< PriorityQueue1LevelBucket< std::deque< std::reference_wrapper< StateAndMeta > > > >
+	{
+		void insert( const StateAndMeta & value, std::size_t f, std::size_t g )
+		{
+			this->get_bucket( f ).get_bucket( g ).push_back( value );
+		}
+
+	};
+
+
 std::vector< Action > Solve( const State & initial )
 {
 
