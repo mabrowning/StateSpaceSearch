@@ -5,12 +5,17 @@ all: puzzle_test_dbg
 opt: puzzle_test
 run: puzzle_test
 	./puzzle_test
-astar: puzzle_test
-	./puzzle_test 
-idastar: puzzle_test
-	./puzzle_test 'idastar'
-rbfs: puzzle_test
-	./puzzle_test 'rbfs'
+
+astar: astar.out
+idastar: idastar.out
+rbfs: rbfs.out
+
+astar.out: puzzle_test
+	time ./puzzle_test | tee $@
+idastar.out: puzzle_test
+	time ./puzzle_test 'idastar' | tee $@
+rbfs.out: puzzle_test
+	time ./puzzle_test 'rbfs' | tee $@
 kill:
 	killall puzzle_test
 

@@ -3,3 +3,4 @@ puzzle_test*
 *~
 *.stacks
 *.svg
+*.out
