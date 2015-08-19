@@ -14,11 +14,11 @@ template< typename State >
 struct AStar : public Solver< State >
 { 
 	typedef typename State::Action Action;
-	typedef Solver< State > Solver;
-	using Solver::Solver;
-	using Solver::GoalCostEstimate;
-	using Solver::GoalTest;
-	using Solver::PrintStatus;
+	typedef Solver< State > Solver_t;
+	using Solver_t::Solver;
+	using Solver_t::GoalCostEstimate;
+	using Solver_t::GoalTest;
+	using Solver_t::PrintStatus;
 
 	//forward declares
 	struct MetaData;

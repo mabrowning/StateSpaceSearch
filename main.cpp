@@ -1,6 +1,7 @@
 #include <vector>
 
 #include <csignal>
+#include <cstring>
 #include <unistd.h>
 
 #include "sliding-puzzle.h"
