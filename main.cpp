@@ -50,11 +50,11 @@ State GetRandomInitialState( State state, int max = 50  )
 int main( int argc, char** argv )
 {
 
-	std::signal( SIGINT, signal_handler );
+	std::signal( SIGUSR1, signal_handler );
 
 	typedef SlidingPuzzleState<4,4> State_t;
 
-	auto initial = GetRandomInitialState( State_t() );
+	auto initial = GetRandomInitialState( State_t(), 100 );
 
 	//Solve that puzzle
 	bool idast = ( argc > 1 && strcmp( argv[1], "idastar" ) == 0 );

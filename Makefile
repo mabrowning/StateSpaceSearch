@@ -11,13 +11,15 @@ idastar: idastar.out
 rbfs: rbfs.out
 
 astar.out: puzzle_test
-	time ./puzzle_test | tee $@
+	time ./puzzle_test | tee -i $@
 idastar.out: puzzle_test
-	time ./puzzle_test 'idastar' | tee $@
+	time ./puzzle_test 'idastar' | tee -i $@
 rbfs.out: puzzle_test
-	time ./puzzle_test 'rbfs' | tee $@
+	time ./puzzle_test 'rbfs' | tee -i $@
 kill:
 	killall puzzle_test
+status:
+	killall -SIGUSR1 puzzle_test
 
 trace_astar:   astar.svg
 trace_idastar: idastar.svg
