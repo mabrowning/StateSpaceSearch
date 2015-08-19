@@ -67,48 +67,91 @@ struct AStar : public Solver< State >
 		}
 	};
 
-	template< typename Bucket >
+	template< typename Bucket, bool prefer_min = true >
 	struct PriorityQueue1LevelBucket
 	{
 		typedef typename Bucket::const_reference const_reference;
 		std::vector< Bucket > queue;
-		std::size_t min_priority = std::numeric_limits< std::size_t >::max();
+
+		//Either min or max
+		std::size_t next_priority = std::numeric_limits< std::size_t >::max();
 
 		bool empty() const
 		{
-			return min_priority == std::numeric_limits< std::size_t >::max();
+			return next_priority == std::numeric_limits< std::size_t >::max();
 		}
-
+		
 		const_reference front() const 
 		{
-			return queue[ min_priority ].front();
+			return queue[ next_priority ].front();
 		}
 
 		void pop_front()
 		{
-			queue[ min_priority ].pop_front();
-			auto it  = queue.begin() + min_priority;
-			auto end = queue.end();
-			while( it != end && (it++)->empty() );
-			if( it == end ) min_priority = std::numeric_limits< std::size_t >::max();
-			else            min_priority = std::distance( queue.begin(), it );
+			queue[ next_priority ].pop_front();
+
+			if( prefer_min )
+			{
+				//search forward for the next non-empty bucket
+				auto ref = queue.begin();
+				auto end = queue.end();
+				auto it  = ref + next_priority;
+				while( it != end && it->empty() ) ++it;
+				if( it == end ) next_priority = std::numeric_limits< std::size_t >::max();
+				else            next_priority = it - ref;
+			}
+			else
+			{
+				//search backward
+				auto ref = queue.rend() - 1;
+				auto end = queue.rend();
+				auto it  = ref - next_priority;
+
+				while( it != end && it->empty() ) ++it;
+				if( it == end ) next_priority = std::numeric_limits< std::size_t >::max();
+				else            next_priority = ref - it;
+
+			}
 		}
 
 		Bucket & get_bucket( std::size_t priority )
 		{
-			if( priority > queue.size() )
+			if( priority >= queue.size() )
 				queue.resize( priority + 1 );
-			if( priority < min_priority )
-				min_priority = priority;
+
+			if( prefer_min )
+			{
+				if( priority < next_priority )
+					next_priority = priority;
+			}
+			else
+			{
+				if( priority > next_priority || empty() )
+					next_priority = priority;
+			}
 			return queue[ priority ];
+
 		}
 	};
 
 	struct PriorityQueue : public 
-		PriorityQueue1LevelBucket< PriorityQueue1LevelBucket< std::deque< std::reference_wrapper< StateAndMeta > > > >
+		PriorityQueue1LevelBucket< 
+			PriorityQueue1LevelBucket< 
+				std::deque< std::reference_wrapper< StateAndMeta > >, true   //Inner queue prefers max
+			> >
 	{
-		void insert( const StateAndMeta & value, std::size_t f, std::size_t g )
+		std::size_t m_size = 0;
+		std::size_t size() const { return m_size; }
+
+		void pop()
 		{
+			m_size--;
+			this->pop_front();
+		}
+
+		void insert( StateAndMeta & value, std::size_t f, std::size_t g )
+		{
+			m_size++;
 			this->get_bucket( f ).get_bucket( g ).push_back( value );
 		}
 
@@ -119,7 +162,7 @@ std::vector< Action > Solve( const State & initial )
 {
 
 	StatesHashTable                         States;
-	std::priority_queue< QueueEntry >     Frontier; //States to explore next
+	PriorityQueue Frontier;
 
 
 	//Add the initial state at 0 cost, returning iterator
@@ -129,7 +172,7 @@ std::vector< Action > Solve( const State & initial )
 	//Create priority queue
 
 	//Add initial state
-	Frontier.push( { initial_state_and_meta, 0 } );
+	Frontier.insert( initial_state_and_meta, 0, 0 );
 
 	StateAndMeta * Final = &initial_state_and_meta;
 
@@ -137,9 +180,8 @@ std::vector< Action > Solve( const State & initial )
 
 	while( !Frontier.empty() )
 	{
-		QueueEntry top = Frontier.top();
-		Frontier.pop();
-		StateAndMeta & state_and_meta = top.state_and_meta;
+		StateAndMeta & state_and_meta = Frontier.front();
+		Frontier.pop();//Ok to keep state_and_meta since Frontier only stores a reference_wrapper
 
 		const State & state = state_and_meta.first;
 		MetaData    & meta  = state_and_meta.second;
@@ -176,7 +218,7 @@ std::vector< Action > Solve( const State & initial )
 				new_meta.num_references++;
 
 				int new_priority = new_cost + GoalCostEstimate( new_state );
-				Frontier.push( { new_state_and_meta, new_priority } );
+				Frontier.insert( new_state_and_meta, new_priority, new_cost );
 			}
 
 		}
