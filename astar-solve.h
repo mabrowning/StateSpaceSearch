@@ -137,7 +137,7 @@ std::vector< Action > Solve( const State & initial )
 
 		if( numChecks % 100 == 0 && PrintStatus() ) 
 		{
-			std::cout << " Node evaluations: " << numChecks  
+			std::cerr << " Node evaluations: " << numChecks  
 				 	  << " Queue size: "       << Frontier.size()
 				 	  << " Nodes size: "       << States.hash_table.size()
 					  << std::endl;
@@ -155,13 +155,6 @@ std::vector< Action > Solve( const State & initial )
 	}
 	std::reverse( ret.begin(), ret.end() );
 
-	/*
-	std::cout << " Node evaluations: " << numChecks  
-			  << " Queue size: "       << Frontier.size()
-			  << " Nodes size: "       << States.hash_table.size()
-			  << std::endl;
-
-			  */
 	return ret;
 }
 };

@@ -81,7 +81,7 @@ std::vector< Action > Solve( const State & initial )
 	{
 		if( counter++ % 100 == 0 && PrintStatus() )
 		{
-			std::cout << Stack.size() << " " << limit << " " << deep_g << std::endl;
+			std::cerr << Stack.size() << " " << limit << " " << deep_g << std::endl;
 		}
 		StackFrame & top = Stack.back();
 		auto & action_num = top.action_num;

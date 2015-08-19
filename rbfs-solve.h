@@ -81,7 +81,7 @@ std::vector< Action > Solve( const State & initial )
 	{
 		if( counter++ % 100 == 0 && PrintStatus() )
 		{
-			std::cout << Stack.size() << " " << limit << " " << deep_g << std::endl;
+			std::cerr << Stack.size() << " " << limit << " " << deep_g << std::endl;
 		}
 		StackFrame & top = Stack.back();
 		auto & action_num = top.action_num;
@@ -129,8 +129,9 @@ std::vector< Action > Solve( const State & initial )
 			Stack.emplace_back( successor.state, successor.g, GoalCostEstimate );
 			if( successor.g >= deep_g )
 			{
+				//debugging
 				deep_g = successor.g + 1;
-				std::cout << deep_g << std::endl;
+				std::cerr << deep_g << std::endl;
 			}
 		}
 	}
