@@ -30,15 +30,17 @@ bool PrintStatus()
 }
 
 template<typename State>
-State GetRandomInitialState( State state  )
+State GetRandomInitialState( State state, int max = 50  )
 {
-	for( int i = 0 ; i < 150; ++i )
+	typename State::Action lastAction; //default
+	for( int i = 0 ; i < max; ++i )
 	{
-		auto actions = state.AvailableActions();
-		auto action = actions[0];
-		while( ( action = actions[rand()%actions.size()] ) == nullptr );
+		auto actions = state.AvailableActions( lastAction );
+		auto paction = actions[0];
+		while( ( paction = actions[rand()%actions.size()] ) == nullptr );
 
-		state = state.Apply( *action );
+		state = state.Apply( *paction );
+		lastAction = *paction;
 	}
 
 	return state;
