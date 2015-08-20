@@ -7,6 +7,7 @@
 #include <limits>
 #include <algorithm>
 #include <stack>
+#include "cpp-sort/sort.h"
 
 template< typename State > 
 struct RBFS
@@ -35,10 +36,6 @@ struct RBFS
 	unsigned int depth = 0;
 
 	typedef std::array< StateAndMeta, Action::MaxBranch > Child_t;
-	static void sort( Child_t & child )
-	{
-		std::sort( std::begin( child ), std::end( child ) );
-	}
 
 	void InitChild( const StateAndMeta & n, Child_t & child )
 	{
@@ -69,8 +66,6 @@ struct RBFS
 		StackFrame( const StateAndMeta & _n, int _B ) : n( _n ), B( _B ) {}
 
 		Child_t child;
-
-		void sort() { RBFS::sort( child ); }
 	};
 
 	void InitStackFrame( StackFrame & frame )
@@ -94,7 +89,7 @@ std::vector< Action > Solve( const State & initial )
 	while( true )
 	{
 		auto & frame = Stack.back();
-		frame.sort();
+		cppsort::sort( frame.child );
 
 		auto & top = frame.child[0];
 

@@ -6,6 +6,7 @@
 #include <queue>
 #include <limits>
 #include <algorithm>
+#include "cpp-sort/sort.h"
 
 template< typename State > 
 struct IDAStar
@@ -30,8 +31,6 @@ std::vector< Action > Solve( const State & initial )
 				//true = more first, false is more last
 				if( paction == nullptr ) 
 					return false; //nullest last
-				if( f == o.f )
-					return g > o.g; //deepest first
 				return f < o.f; //cheapest first
 			}
 		};
@@ -59,7 +58,7 @@ std::vector< Action > Solve( const State & initial )
 				}
 				++i;
 			}
-			std::sort( std::begin( successors ), std::end( successors ) );
+			cppsort::sort( successors );
 		}
 	};
 	std::deque< StackFrame > Stack { { StackFrame{ initial, Action(), 0 }}  };

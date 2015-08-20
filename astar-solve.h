@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <limits>
 #include <algorithm>
+#include <functional>
 
 template< typename State > 
 struct AStar
@@ -65,7 +66,6 @@ struct AStar
 	template< typename Bucket, bool prefer_min = true >
 	struct PriorityQueue1LevelBucket
 	{
-		typedef typename Bucket::const_reference const_reference;
 		std::vector< Bucket > queue;
 
 		//Either min or max
@@ -76,7 +76,7 @@ struct AStar
 			return next_priority == std::numeric_limits< std::size_t >::max();
 		}
 		
-		const_reference front() const 
+		auto front() -> decltype( queue[ next_priority ].front() )
 		{
 			return queue[ next_priority ].front();
 		}

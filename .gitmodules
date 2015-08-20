@@ -1,0 +1,3 @@
+[submodule "cpp-sort"]
+	path = cpp-sort
+	url = https://github.com/Morwenn/cpp-sort

@@ -5,6 +5,8 @@ all: puzzle_test_dbg
 opt: puzzle_test
 run: puzzle_test
 	./puzzle_test
+clean:
+	@-rm puzzle_test puzzle_test_dbg *.svg *.out callgrind.*
 
 astar: astar.out
 idastar: idastar.out
@@ -32,10 +34,12 @@ trace_rbfs:    rbfs.svg
 	-rm -f $@
 	sudo ./ustacks.d -c './puzzle_test $(basename $@)' -o $@
 
+CC=g++-mp-5
+CFLAGS=-I cpp-sort/include --std=c++14 -g 
 
 puzzle_test_dbg: main.cpp $(HEADERS)
-	 g++ main.cpp --std=c++11 -g -o puzzle_test_dbg
+	 $(CC) $(CFLAGS) $< -o $@
 puzzle_test: main.cpp $(HEADERS)
-	 g++ main.cpp --std=c++11 -g -O3 -o puzzle_test
+	 $(CC) $(CFLAGS) -O3 $< -o $@
 
 .PHONY: astar idastar rbfs kill trace_idastar trace_astar trace_rbfs
