@@ -2,8 +2,6 @@
 #ifndef ASTAR_SOLVE_H
 #define ASTAR_SOLVE_H
 
-#include "solver.h"
-
 #include <vector>
 #include <queue>
 #include <unordered_map>
@@ -11,14 +9,11 @@
 #include <algorithm>
 
 template< typename State > 
-struct AStar : public Solver< State >
+struct AStar
 { 
+	bool PrintStatus = false;
+
 	typedef typename State::Action Action;
-	typedef Solver< State > Solver_t;
-	using Solver_t::Solver;
-	using Solver_t::GoalCostEstimate;
-	using Solver_t::GoalTest;
-	using Solver_t::PrintStatus;
 
 	//forward declares
 	struct MetaData;
@@ -188,7 +183,7 @@ std::vector< Action > Solve( const State & initial )
 
 		meta.num_references--;
 
-		if( GoalTest(state) )
+		if( state.IsGoal() )
 		{
 			Final = &state_and_meta;
 			break;
@@ -199,7 +194,7 @@ std::vector< Action > Solve( const State & initial )
 		for( auto &paction : state.AvailableActions() )
 		{
 			if( !paction ) continue;
-			auto action = *paction;
+			auto & action = *paction;
 
 			//See what the new state is after applying the action
 			State new_state   = state.Apply( action );
@@ -217,16 +212,15 @@ std::vector< Action > Solve( const State & initial )
 				new_meta.parent_entry  = &state_and_meta;
 				new_meta.num_references++;
 
-				int new_priority = new_cost + GoalCostEstimate( new_state );
+				int new_priority = new_cost + new_state.EstGoalDist();
 				Frontier.insert( new_state_and_meta, new_priority, new_cost );
 			}
 
 		}
 
-		numChecks++;
-
-		if( numChecks % 100 == 0 && PrintStatus() ) 
+		if( ++numChecks % 100 == 0 && PrintStatus ) 
 		{
+			PrintStatus = false;
 			std::cerr << " Node evaluations: " << numChecks  
 				 	  << " Queue size: "       << Frontier.size()
 				 	  << " Nodes size: "       << States.hash_table.size()

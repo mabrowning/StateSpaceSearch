@@ -7,17 +7,11 @@
 #include <limits>
 #include <algorithm>
 
-#include "solver.h"
-
 template< typename State > 
-struct IDAStar : public Solver< State >
+struct IDAStar
 {
+	bool PrintStatus = false;
 	typedef typename State::Action Action;
-	typedef Solver< State > Solver_t;
-	using Solver_t::Solver;
-	using Solver_t::GoalCostEstimate;
-	using Solver_t::GoalTest;
-	using Solver_t::PrintStatus;
 
 std::vector< Action > Solve( const State & initial )
 {
@@ -47,8 +41,7 @@ std::vector< Action > Solve( const State & initial )
 		int limit; //return
 		int action_num;
 
-		StackFrame( const State & s, const Action & prevAction, int g, 
-				const IDAStar & solver )
+		StackFrame( const State & s, const Action & prevAction, int g )
 			: state( s )
 			, limit(std::numeric_limits<int>::max()) //inifinity
 			, action_num( -1 )
@@ -62,16 +55,16 @@ std::vector< Action > Solve( const State & initial )
 				{
 					i->g      = g + paction->GetCost();
 					i->state  = state.Apply( *paction );
-					i->f      = i->g + solver.GoalCostEstimate( i->state );
+					i->f      = i->g + i->state.EstGoalDist();
 				}
 				++i;
 			}
 			std::sort( std::begin( successors ), std::end( successors ) );
 		}
 	};
-	std::deque< StackFrame > Stack { { StackFrame{ initial, Action(), 0, *this }}  };
+	std::deque< StackFrame > Stack { { StackFrame{ initial, Action(), 0 }}  };
 
-	int limit = GoalCostEstimate( initial ) ;
+	int limit = initial.EstGoalDist();
 	int oldlimit = 0;
 
 	unsigned int counter = 0;
@@ -79,8 +72,9 @@ std::vector< Action > Solve( const State & initial )
 
 	while( !Stack.empty() && limit != oldlimit )
 	{
-		if( counter++ % 100 == 0 && PrintStatus() )
+		if( counter++ % 100 == 0 && PrintStatus )
 		{
+			PrintStatus = false;
 			std::cerr << Stack.size() << " " << limit << " " << deep_g << std::endl;
 		}
 		StackFrame & top = Stack.back();
@@ -112,7 +106,7 @@ std::vector< Action > Solve( const State & initial )
 		}
 		auto &successor = top.successors[ action_num ];
 
-		if( GoalTest( successor.state ) ) 
+		if( successor.state.IsGoal() ) 
 		{
 			//Done!
 			std::vector< Action > ret;
@@ -126,12 +120,11 @@ std::vector< Action > Solve( const State & initial )
 			top.limit = std::min( top.limit, successor.f );
 		else
 		{
-			Stack.emplace_back( successor.state, *successor.paction, successor.g, *this );
+			Stack.emplace_back( successor.state, *successor.paction, successor.g );
 			if( successor.g >= deep_g )
 				deep_g = successor.g + 1;
 		}
 	}
-
 
 	return std::vector< Action >{};
 

@@ -14,20 +14,12 @@ namespace
 {
 	  volatile std::sig_atomic_t gSignalStatus;
 }
+
+bool* gPrintStatus = nullptr;
  
 void signal_handler(int signal)
 {
-	  gSignalStatus = signal;
-}
-
-bool PrintStatus() 
-{
-	if( gSignalStatus > 0 )
-	{
-		gSignalStatus = 0;
-		return true;
-	}
-	return false;
+	if( gPrintStatus ) *gPrintStatus = true;
 }
 
 template<typename State>
@@ -53,7 +45,7 @@ int main( int argc, char** argv )
 
 	std::signal( SIGUSR1, signal_handler );
 
-	typedef SlidingPuzzleState<4,4> State_t;
+	typedef SlidingPuzzleState<5,5> State_t;
 
 	auto initial = GetRandomInitialState( State_t(), 100 );
 
@@ -63,26 +55,20 @@ int main( int argc, char** argv )
 	std::vector< State_t::Action > Solution;
 	if( idast )
 	{
-		auto Solver = IDAStar<State_t >{
-				std::mem_fn( &State_t::EstGoalDist ), //heuristic
-				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
-				PrintStatus };
+		auto Solver = IDAStar<State_t >{};
+		gPrintStatus = &Solver.PrintStatus;
 		Solution = Solver.Solve( initial );
 	}
 	else if( rbfs ) 
 	{
-		auto Solver = RBFS<State_t>{
-				std::mem_fn( &State_t::EstGoalDist ), //heuristic
-				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
-				PrintStatus };
+		auto Solver = RBFS<State_t>{};
+		gPrintStatus = &Solver.PrintStatus;
 		Solution = Solver.Solve( initial );
 	}
 	else
 	{
-		auto Solver = AStar<State_t>{
-				std::mem_fn( &State_t::EstGoalDist ), //heuristic
-				std::mem_fn( &State_t::IsGoal ),	  //GoalTest
-				PrintStatus };
+		auto Solver = AStar<State_t>{};
+		gPrintStatus = &Solver.PrintStatus;
 		Solution = Solver.Solve( initial );
 	}
 

@@ -8,17 +8,11 @@
 #include <algorithm>
 #include <stack>
 
-#include "solver.h"
-
 template< typename State > 
-struct RBFS : public Solver< State >
+struct RBFS
 {
+	bool PrintStatus = false;
 	typedef typename State::Action Action;
-	typedef Solver< State > Solver_t;
-	using Solver_t::Solver;
-	using Solver_t::GoalCostEstimate;
-	using Solver_t::GoalTest;
-	using Solver_t::PrintStatus;
 
 	std::vector< Action > Solution;
 
@@ -57,7 +51,7 @@ struct RBFS : public Solver< State >
 				i->action = *paction;
 				i->g      = n.g + paction->GetCost();
 				i->state  = n.state.Apply( *paction );
-				i->f      = i->g + GoalCostEstimate( i->state );
+				i->f      = i->g + i->state.EstGoalDist();
 				if( n.f < n.F )
 					i->F  = std::max( n.F, i->f );
 				else
@@ -86,9 +80,9 @@ struct RBFS : public Solver< State >
 
 std::vector< Action > Solve( const State & initial )
 {
-	if( GoalTest( initial) ) return Solution; //No actions to do
+	if( initial.IsGoal() ) return Solution; //No actions to do
 
-	int f = GoalCostEstimate( initial );
+	int f = initial.EstGoalDist();
 	StateAndMeta n{ Action{}, initial, 0/*g*/, f/*f*/, f/*F*/ };
 
 	std::vector< StackFrame> Stack;
@@ -104,14 +98,15 @@ std::vector< Action > Solve( const State & initial )
 
 		auto & top = frame.child[0];
 
-		if( ++counter % 100 == 0 && PrintStatus() )
+		if( ++counter % 100 == 0 && PrintStatus )
 		{
+			PrintStatus = false;
 			std::cerr << counter << " " << Stack.size() << " " << top.F << " " << frame.B << std::endl;
 		}
 
 		if( top.F <= frame.B )
 		{
-			if( GoalTest( top.state ) )
+			if( top.state.IsGoal() )
 			{
 				Solution.reserve( Stack.size() );
 				for( auto it = Stack.begin(), end = Stack.end(); it != end; ++it  )
