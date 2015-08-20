@@ -110,6 +110,9 @@ struct SlidingPuzzleState
 	    , n( 0 )
 		, GoalDist( 0 )
 	{
+	}
+	void init()
+	{
 		//Initial state, all in order
 		unsigned char v=0;
 		for( auto & row : arr )

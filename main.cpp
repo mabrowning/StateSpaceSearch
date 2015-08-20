@@ -25,6 +25,7 @@ void signal_handler(int signal)
 template<typename State>
 State GetRandomInitialState( State state, int max = 50  )
 {
+	state.init();
 	typename State::Action lastAction; //default
 	for( int i = 0 ; i < max; ++i )
 	{
