@@ -6,6 +6,7 @@
 #include <queue>
 #include <limits>
 #include <algorithm>
+#include <stack>
 
 #include "solver.h"
 
@@ -23,20 +24,15 @@ struct RBFS : public Solver< State >
 
 	struct StateAndMeta
 	{
-		Action* paction;
+		Action action;
 		State state;
 
 		int g;
 		int f;
-		int F;
+		int F;// = std::numeric_limits<int>::max();
 
 		bool operator< ( const StateAndMeta & o ) const
 		{
-			//true = more first, false is more last
-			if( paction == nullptr ) 
-				return false; //nullest last
-			if( F == o.F )
-				return g > o.g; //deepest first
 			return F < o.F; //cheapest first
 		}
 	};
@@ -44,31 +40,21 @@ struct RBFS : public Solver< State >
 	unsigned int counter = 0;
 	unsigned int depth = 0;
 
-	int RBFS_step( const StateAndMeta & n, int B )
+	typedef std::array< StateAndMeta, Action::MaxBranch > Child_t;
+	static void sort( Child_t & child )
 	{
-		if( GoalTest( n.state ) )
-		{
-			Solution.resize(depth);
-			return -1;
-		}
+		std::sort( std::begin( child ), std::end( child ) );
+	}
 
-		++depth;
-
-		//if( counter++ % 100 == 0 && PrintStatus() )
-		if( counter++ % 100 == 0 )
-		{
-			std::cerr << depth << " " << n.F << std::endl;
-		}
-
-		std::array< StateAndMeta, Action::MaxBranch > child;
-
-		auto actions = n.state.AvailableActions();
+	void InitChild( const StateAndMeta & n, Child_t & child )
+	{
+		auto actions = n.state.AvailableActions( n.action );
 		auto i = std::begin( child );
 		for( auto & paction : actions )
 		{
-			i->paction = paction;
 			if( paction )
 			{
+				i->action = *paction;
 				i->g      = n.g + paction->GetCost();
 				i->state  = n.state.Apply( *paction );
 				i->f      = i->g + GoalCostEstimate( i->state );
@@ -76,42 +62,84 @@ struct RBFS : public Solver< State >
 					i->F  = std::max( n.F, i->f );
 				else
 					i->F  = i->f;
+				++i;
 			}
-			++i;
 		}
+		while( i != std::end( child )) (i++)->F = std::numeric_limits<int>::max();
+	}
 
-		std::sort( std::begin( child ), std::end( child ) );
-		while( child[0].F <= B )
-		{
-			auto & top = child[0];
+	struct StackFrame
+	{
+		const StateAndMeta & n;
+		int B;
+		StackFrame( const StateAndMeta & _n, int _B ) : n( _n ), B( _B ) {}
 
-			top.F = RBFS_step( top, std::min( B, child[1].F ) );
-			if( top.F == -1 )
-			{
-				Solution[depth-1] = *top.paction;
-				return -1;
-			}
+		Child_t child;
 
-			std::sort( std::begin( child ), std::end( child ) );
-		} 
+		void sort() { RBFS::sort( child ); }
+	};
 
-		--depth;
-		return child[0].F;
+	void InitStackFrame( StackFrame & frame )
+	{
+		InitChild( frame.n, frame.child );
 	}
 
 std::vector< Action > Solve( const State & initial )
 {
+	if( GoalTest( initial) ) return Solution; //No actions to do
+
 	int f = GoalCostEstimate( initial );
-	StateAndMeta n{ nullptr, initial, 0/*g*/, f/*f*/, f/*F*/ };
-	int B = f;
+	StateAndMeta n{ Action{}, initial, 0/*g*/, f/*f*/, f/*F*/ };
+
+	std::vector< StackFrame> Stack;
+	Stack.reserve( 2*f );
+
+	Stack.push_back( { n, f/*initial B*/ } );
+	InitStackFrame( Stack.back() );
+
 	while( true )
 	{
-		B = RBFS_step( n, B );
-		if( B == -1 ) break;
-	}
-	
-	return Solution;
+		auto & frame = Stack.back();
+		frame.sort();
 
+		auto & top = frame.child[0];
+
+		if( ++counter % 100 == 0 && PrintStatus() )
+		{
+			std::cerr << counter << " " << Stack.size() << " " << top.F << " " << frame.B << std::endl;
+		}
+
+		if( top.F <= frame.B )
+		{
+			if( GoalTest( top.state ) )
+			{
+				Solution.reserve( Stack.size() );
+				for( auto it = Stack.begin(), end = Stack.end(); it != end; ++it  )
+					Solution.push_back( it->child[0].action );
+				break;
+			}
+
+			Stack.emplace_back( top, std::min( frame.B, frame.child[1].F ) );
+			InitStackFrame( Stack.back() );
+		}
+		else
+		{
+			int ret = top.F;
+
+			if( Stack.size() == 1 )
+			{
+				if( frame.B == ret )
+					break;
+				else
+					frame.B = ret;
+				continue;
+			}
+
+			Stack.pop_back();
+			Stack.back().child[0].F = ret;
+		}
+	}
+	return Solution;
 }
 };
 
