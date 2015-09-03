@@ -34,7 +34,8 @@ trace_rbfs:    rbfs.svg
 	-rm -f $@
 	sudo ./ustacks.d -c './puzzle_test $(basename $@)' -o $@
 
-CC=g++-mp-5
+#CC=g++-mp-5
+CC=g++-5
 CFLAGS=-I cpp-sort/include --std=c++14 -g 
 
 puzzle_test_dbg: main.cpp $(HEADERS)
